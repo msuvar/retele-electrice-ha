@@ -28,6 +28,12 @@ def to_float(value: Any) -> float | None:
         return None
 
 
+# Coduri posibile pentru energia activă produsă/livrată în rețea în arhiva de
+# indexuri. Portalul folosește „EA” pentru consum; pentru producție codul nu a
+# putut fi observat pe un cont fără prosumator, așa că acceptăm variantele uzuale.
+PRODUCED_CODES = ("EAP", "EA_P", "EAPR", "EAL", "EAE", "EA-", "EAI")
+
+
 def _parse_reading_date(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -154,20 +160,41 @@ class ReteleElectriceCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]
         out = []
         for r in raw:
             date = _parse_reading_date(r.get("measureDate"))
-            value = None
+            if date is None:
+                continue
+            values: dict[str, float] = {}
             for m in r.get("meter") or []:
-                if m.get("typeofenergy_measured") == "EA":
-                    value = to_float(m.get("Value"))
-                    break
-            if date is None or value is None:
+                kind = str(m.get("typeofenergy_measured") or "").strip().upper()
+                val = to_float(m.get("Value"))
+                if kind and val is not None:
+                    values[kind] = val
+            consumed = values.get("EA")
+            produced = next(
+                (values[k] for k in PRODUCED_CODES if k in values), None
+            )
+            if consumed is None and produced is None:
                 continue
             out.append(
                 {
                     "date": date,
-                    "value": value,
+                    "value": consumed,
+                    "produced": produced,
+                    "all": values,
                     "type": r.get("typeOfReading"),
                     "serial": r.get("SerialNumber"),
                 }
             )
         out.sort(key=lambda x: x["date"], reverse=True)
         return out
+
+
+def is_prosumer(data: dict[str, Any]) -> bool:
+    """POD de prosumator: marcat în cont sau cu date de producție în răspunsuri."""
+    if (data.get("info") or {}).get("isProductor__c"):
+        return True
+    if any(r.get("produced") is not None for r in data.get("readings") or []):
+        return True
+    return any(
+        to_float((data.get(k) or {}).get("SUM_EAP")) is not None
+        for k in ("today", "yesterday", "month")
+    )

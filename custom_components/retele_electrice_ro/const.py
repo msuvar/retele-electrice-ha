@@ -25,4 +25,4 @@ VF_METER_INSTANT = "PED_ProxyCallWSAsynSmartMeterIstantData"
 AURA_GET_PODS = "apex://PED_Utility/ACTION$getPODs"
 AURA_GET_USER_NAME = "apex://PED_Utility/ACTION$getUserName"
 
-PLATFORMS = ["sensor", "binary_sensor"]
+PLATFORMS = ["sensor", "binary_sensor", "button"]

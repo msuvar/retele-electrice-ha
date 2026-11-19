@@ -18,37 +18,49 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import ReteleElectriceConfigEntry
-from .coordinator import to_float
+from .coordinator import is_prosumer, to_float
 from .entity import ReteleElectriceEntity
 
 Data = dict[str, Any]
 
 
-def _latest(d: Data) -> Data | None:
-    r = d.get("readings") or []
+def _with(d: Data, field: str) -> list[Data]:
+    return [r for r in d.get("readings") or [] if r.get(field) is not None]
+
+
+def _latest(d: Data, field: str = "value") -> Data | None:
+    r = _with(d, field)
     return r[0] if r else None
 
 
-def _last_billed_consumption(d: Data) -> float | None:
+def _last_month(field: str) -> Callable[[Data], float | None]:
     """Diferența dintre ultimele două citiri reale (de obicei pe 1 ale lunii)."""
-    real = [r for r in d.get("readings") or [] if r.get("type") == "real"]
-    if len(real) < 2:
-        return None
-    return round(real[0]["value"] - real[1]["value"], 3)
+
+    def fn(d: Data) -> float | None:
+        real = [r for r in _with(d, field) if r.get("type") == "real"]
+        if len(real) < 2:
+            return None
+        return round(real[0][field] - real[1][field], 3)
+
+    return fn
 
 
-def _readings_attrs(d: Data) -> Data:
-    latest = _latest(d)
-    if not latest:
-        return {}
-    return {
-        "data_citire": latest["date"].date().isoformat(),
-        "tip_citire": latest["type"],
-        "serie_contor": latest["serial"],
-        "istoric": {
-            r["date"].date().isoformat(): r["value"] for r in (d.get("readings") or [])[:24]
-        },
-    }
+def _readings_attrs(field: str) -> Callable[[Data], Data]:
+    def fn(d: Data) -> Data:
+        latest = _latest(d, field)
+        if not latest:
+            return {}
+        return {
+            "data_citire": latest["date"].date().isoformat(),
+            "tip_citire": latest["type"],
+            "serie_contor": latest["serial"],
+            "coduri_energie": sorted(latest.get("all", {})),
+            "istoric": {
+                r["date"].date().isoformat(): r[field] for r in _with(d, field)[:24]
+            },
+        }
+
+    return fn
 
 
 def _history_value(key: str, field: str = "SUM_EA") -> Callable[[Data], float | None]:
@@ -98,6 +110,7 @@ class REDescription(SensorEntityDescription):
     value_fn: Callable[[Data], Any]
     attrs_fn: Callable[[Data], Data] | None = None
     smart_only: bool = False
+    prosumer_only: bool = False
 
 
 SENSORS: tuple[REDescription, ...] = (
@@ -108,7 +121,7 @@ SENSORS: tuple[REDescription, ...] = (
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=0,
         value_fn=lambda d: (_latest(d) or {}).get("value"),
-        attrs_fn=_readings_attrs,
+        attrs_fn=_readings_attrs("value"),
     ),
     REDescription(
         key="data_ultimei_citiri",
@@ -120,7 +133,7 @@ SENSORS: tuple[REDescription, ...] = (
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=0,
-        value_fn=_last_billed_consumption,
+        value_fn=_last_month("value"),
     ),
     REDescription(
         key="intreruperi",
@@ -184,6 +197,58 @@ SENSORS: tuple[REDescription, ...] = (
         attrs_fn=lambda d: {"valori": d.get("instant")},
     ),
     REDescription(
+        key="index_energie_produsa",
+        prosumer_only=True,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=0,
+        icon="mdi:solar-power",
+        value_fn=lambda d: (_latest(d, "produced") or {}).get("produced"),
+        attrs_fn=_readings_attrs("produced"),
+    ),
+    REDescription(
+        key="productie_ultima_luna",
+        prosumer_only=True,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=0,
+        icon="mdi:solar-power",
+        value_fn=_last_month("produced"),
+    ),
+    REDescription(
+        key="productie_azi",
+        smart_only=True,
+        prosumer_only=True,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=2,
+        icon="mdi:solar-power",
+        value_fn=_history_value("today", "SUM_EAP"),
+    ),
+    REDescription(
+        key="productie_ieri",
+        smart_only=True,
+        prosumer_only=True,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=2,
+        icon="mdi:solar-power",
+        value_fn=_history_value("yesterday", "SUM_EAP"),
+    ),
+    REDescription(
+        key="productie_luna_curenta",
+        smart_only=True,
+        prosumer_only=True,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=1,
+        icon="mdi:solar-power",
+        value_fn=_history_value("month", "SUM_EAP"),
+    ),
+    REDescription(
         key="stare_contor",
         smart_only=True,
         icon="mdi:meter-electric",
@@ -209,6 +274,8 @@ async def async_setup_entry(
     for pod, data in (coordinator.data or {}).items():
         for desc in SENSORS:
             if desc.smart_only and not data.get("smart"):
+                continue
+            if desc.prosumer_only and not is_prosumer(data):
                 continue
             entities.append(ReteleElectriceSensor(coordinator, pod, desc))
     async_add_entities(entities)

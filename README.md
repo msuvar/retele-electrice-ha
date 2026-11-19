@@ -18,6 +18,9 @@ integrări și nu are sistem de licență.
 | Consum azi / ieri / luna curentă | Doar contor inteligent, din curba de sarcină (kWh) |
 | Valori instantanee | Doar contor inteligent: ultimele valori, dacă au fost solicitate din portal |
 | Stare contor | Doar contor inteligent: serie, tip, data instalării |
+| Buton „Actualizare valori instantanee” | Doar contor inteligent: recitește imediat valorile instantanee din portal |
+| Index energie produsă / Producție ultima lună citită | Doar prosumatori: indexul energiei livrate în rețea (merge în Energy dashboard ca „Return to grid”) |
+| Producție azi / ieri / luna curentă | Doar prosumatori cu contor inteligent, din curba de sarcină |
 
 ## Instalare
 
@@ -44,6 +47,10 @@ logger:
 ```
 
 ## Limitări
+
+- Partea de prosumator a fost scrisă fără acces la un cont de prosumator. Atributul
+  `coduri_energie` al senzorului de index arată codurile primite de la portal: dacă indexul
+  produs nu apare, trimite valoarea acestui atribut ca să adăugăm codul corect.
 
 - Portalul nu are API public; integrarea folosește aceleași cereri ca site-ul și se poate strica
   dacă portalul se schimbă.

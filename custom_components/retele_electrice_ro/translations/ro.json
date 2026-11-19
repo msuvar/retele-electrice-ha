@@ -80,11 +80,31 @@
       },
       "stare_contor": {
         "name": "Stare contor"
+      },
+      "index_energie_produsa": {
+        "name": "Index energie produsă"
+      },
+      "productie_ultima_luna": {
+        "name": "Producție ultima lună citită"
+      },
+      "productie_azi": {
+        "name": "Producție azi"
+      },
+      "productie_ieri": {
+        "name": "Producție ieri"
+      },
+      "productie_luna_curenta": {
+        "name": "Producție luna curentă"
       }
     },
     "binary_sensor": {
       "intrerupere_activa": {
         "name": "Întrerupere activă"
+      }
+    },
+    "button": {
+      "actualizare_instantanee": {
+        "name": "Actualizare valori instantanee"
       }
     }
   }

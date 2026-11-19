@@ -80,11 +80,31 @@
       },
       "stare_contor": {
         "name": "Meter status"
+      },
+      "index_energie_produsa": {
+        "name": "Produced energy index"
+      },
+      "productie_ultima_luna": {
+        "name": "Last read month production"
+      },
+      "productie_azi": {
+        "name": "Production today"
+      },
+      "productie_ieri": {
+        "name": "Production yesterday"
+      },
+      "productie_luna_curenta": {
+        "name": "Production this month"
       }
     },
     "binary_sensor": {
       "intrerupere_activa": {
         "name": "Outage active"
+      }
+    },
+    "button": {
+      "actualizare_instantanee": {
+        "name": "Refresh instant values"
       }
     }
   }
