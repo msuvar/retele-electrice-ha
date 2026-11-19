@@ -1,3 +1,5 @@
+<img src="icon.svg" width="96" align="right" alt="">
+
 # Rețele Electrice România — integrare Home Assistant (independentă)
 
 Integrare custom, scrisă de la zero, care citește datele locului de consum din portalul
@@ -27,6 +29,9 @@ integrări și nu are sistem de licență.
 
 Intervalul de actualizare implicit este de 1 oră (minim 15 minute). Datele din curba de sarcină
 apar pe portal cu o întârziere de câteva ore, deci „Consum azi” poate rămâne gol dimineața.
+
+Iconița integrării se află în `brand/` și apare automat începând cu Home Assistant 2026.3
+(după repornire poate fi nevoie de un refresh forțat în browser).
 
 ## Depanare
 

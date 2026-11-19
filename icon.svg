@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E6FA8"/>
+      <stop offset="1" stop-color="#0D3550"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE066"/>
+      <stop offset="1" stop-color="#FFB020"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#bg)"/>
+
+  <!-- fire de înaltă tensiune -->
+  <g fill="none" stroke="#9FD3F5" stroke-width="5" stroke-linecap="round" opacity="0.75">
+    <path d="M40 210 Q 95 232 150 176"/>
+    <path d="M362 176 Q 417 232 472 210"/>
+    <path d="M40 290 Q 80 306 120 248"/>
+    <path d="M392 248 Q 432 306 472 290"/>
+  </g>
+
+  <!-- stâlp de înaltă tensiune -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 84 L226 150 L168 436"/>
+    <path d="M256 84 L286 150 L344 436"/>
+    <path d="M150 176 L362 176"/>
+    <path d="M120 248 L392 248"/>
+  </g>
+  <g fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" opacity="0.9">
+    <path d="M226 150 L286 150"/>
+    <path d="M221 176 L278 248 M291 176 L234 248"/>
+    <path d="M206 248 L320 340 M306 248 L192 340"/>
+    <path d="M192 340 L320 340"/>
+    <path d="M186 370 L326 370"/>
+  </g>
+  <!-- izolatori -->
+  <g fill="#FFFFFF">
+    <circle cx="150" cy="176" r="10"/><circle cx="362" cy="176" r="10"/>
+    <circle cx="120" cy="248" r="10"/><circle cx="392" cy="248" r="10"/>
+  </g>
+
+  <!-- fulger -->
+  <path d="M352 236 L292 352 L338 352 L306 452 L410 316 L360 316 L398 236 Z"
+        fill="url(#bolt)" stroke="#0D3550" stroke-width="12" stroke-linejoin="round"/>
+</svg>
