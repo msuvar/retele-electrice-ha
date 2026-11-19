@@ -60,6 +60,12 @@ _REDIRECT_RES = (
         re.IGNORECASE,
     ),
 )
+_LOGIN_PAGE = "PEDRO_SiteLogin"
+_JSF_SUBMIT_RE = re.compile(r"jsfcljs\(document\.forms\['[^']+'\],\s*'([^']+)'")
+_VF_MSG_RE = re.compile(
+    r'<(?:div|span|ul)[^>]+class="[^"]*(?:messageText|errorM\d|message|error)[^"]*"[^>]*>(.*?)</(?:div|span|ul)>',
+    re.IGNORECASE | re.DOTALL,
+)
 _LOGIN_ERROR_RE = re.compile(
     r'<div[^>]+id="error"[^>]*>(.*?)</div>', re.IGNORECASE | re.DOTALL
 )
@@ -97,6 +103,12 @@ def _parse_inputs(page: str) -> list[tuple[str, str]]:
         if name:
             fields.append((name, html.unescape(attrs.get("value", ""))))
     return fields
+
+
+def _is_login(text: str) -> bool:
+    """Adevărat dacă URL-ul/textul indică pagina de login (sesiune expirată)."""
+    low = text.lower()
+    return "/login" in low or "sitelogin" in low or "/s/login" in low
 
 
 def _fmt(dt: datetime) -> str:
@@ -142,21 +154,8 @@ class ReteleElectriceClient:
         self._aura_token = None
         self._session.cookie_jar.clear()
 
-        await self._request("GET", f"{BASE_URL}/login")
-        form = {
-            "un": self._username,
-            "username": self._username,
-            "pw": self._password,
-            "startURL": "/s/",
-            "hasRememberUn": "true",
-            "passwordShown": "true",
-            "useSecure": "true",
-            "lt": "standard",
-            "display": "page",
-            "width": "1920",
-            "height": "1080",
-        }
-        url, text = await self._request("POST", f"{BASE_URL}/login", data=form)
+        url, text = await self._site_login()
+        _LOGGER.debug("Login: răspuns de la %s (%d caractere)", url.split("?")[0], len(text))
 
         # Salesforce răspunde de obicei cu o pagină care face redirect prin JS
         # către frontdoor.jsp, unde se setează cookie-ul de sesiune.
@@ -168,12 +167,20 @@ class ReteleElectriceClient:
                     break
             if not target or target.startswith("javascript"):
                 break
+            _LOGGER.debug("Login: redirect către %s", target.split("?")[0])
             url, text = await self._request("GET", urljoin(url, target))
 
         if err := _LOGIN_ERROR_RE.search(text):
             msg = re.sub(r"<[^>]+>", "", err.group(1)).strip()
             if msg:
                 raise ReteleElectriceAuthError(msg)
+        if _LOGIN_PAGE in url and 'type="password"' in text:
+            # Am rămas pe pagina de login: afișăm mesajul portalului, dacă există.
+            msg = ""
+            if m := _VF_MSG_RE.search(text):
+                msg = re.sub(r"<[^>]+>", " ", m.group(1))
+                msg = re.sub(r"\s+", " ", html.unescape(msg)).strip()
+            raise ReteleElectriceAuthError(msg or "Email sau parolă incorectă")
         if "/_ui/identity/verification" in url or "verification" in url.lower():
             raise ReteleElectriceAuthError(
                 "Portalul cere verificare suplimentară (cod pe email/SMS). "
@@ -184,10 +191,39 @@ class ReteleElectriceClient:
         self._logged_in = True
         _LOGGER.debug("Autentificare reușită pentru %s", self._username)
 
+    async def _site_login(self) -> tuple[str, str]:
+        """Trimite formularul Visualforce PEDRO_SiteLogin (pagina de login a portalului)."""
+        url, page = await self._request(
+            "GET", f"{BASE_URL}/{_LOGIN_PAGE}?startURL=%2Fs%2F"
+        )
+        form_tag = re.search(r"<form\b[^>]*>", page, re.IGNORECASE)
+        fields = _parse_inputs(page)
+        user_field = next((n for n, _ in fields if n.endswith(":username")), None)
+        pass_field = next((n for n, _ in fields if n.endswith(":password")), None)
+        if not form_tag or not user_field or not pass_field:
+            raise ReteleElectriceError("Nu am găsit formularul de login al portalului")
+
+        action = dict(_ATTR_RE.findall(form_tag.group(0))).get("action") or url
+        data: list[tuple[str, str]] = []
+        for name, value in fields:
+            if name == user_field:
+                value = self._username
+            elif name == pass_field:
+                value = self._password
+            data.append((name, value))
+        # Butonul „Autentifică-te” trimite și id-ul componentei (ex. loginForm:j_id25).
+        if m := _JSF_SUBMIT_RE.search(page):
+            parts = m.group(1).split(",")
+            data.extend(zip(parts[0::2], parts[1::2]))
+
+        return await self._request(
+            "POST", urljoin(url, html.unescape(action)), data=data
+        )
+
     async def _bootstrap_aura(self) -> None:
         """Citește contextul Aura (fwuid, versiune app, token) din pagina /s/."""
         url, page = await self._request("GET", f"{BASE_URL}/s/")
-        if "/login" in url:
+        if _is_login(url):
             raise ReteleElectriceAuthError("Email sau parolă incorectă")
 
         fwuid = re.search(r'"fwuid":"([^"]+)"', page)
@@ -259,7 +295,7 @@ class ReteleElectriceClient:
         try:
             payload = json.loads(body)
         except ValueError as err:
-            if "/login" in body[:2000]:
+            if _is_login(body[:2000]):
                 raise _SessionExpired("redirect la login") from err
             raise ReteleElectriceError(f"Răspuns Aura invalid: {body[:200]}") from err
         action = payload["actions"][0]
@@ -285,7 +321,7 @@ class ReteleElectriceClient:
     # ------------------------------------------------------------------ #
     async def _vf_once(self, page: str, method: str, params: str) -> Any:
         url, form_page = await self._request("GET", f"{BASE_URL}/{page}")
-        if "/login" in url or "com.salesforce.visualforce.ViewState" not in form_page:
+        if _is_login(url) or "com.salesforce.visualforce.ViewState" not in form_page:
             raise _SessionExpired(f"{page} nu a întors formularul")
 
         fields = _parse_inputs(form_page)
@@ -304,7 +340,7 @@ class ReteleElectriceClient:
         _, text = await self._request("POST", f"{BASE_URL}/{page}", data=data)
         m = _ASYNC_RESP_RE.search(text)
         if not m:
-            if "/login" in text[:3000]:
+            if _is_login(text[:3000]):
                 raise _SessionExpired(f"{page}: redirect la login")
             raise ReteleElectriceError(f"{page}/{method}: răspuns fără date")
         raw = html.unescape(m.group(1)).strip()

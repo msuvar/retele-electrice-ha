@@ -58,7 +58,8 @@ class ReteleElectriceConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
             try:
                 self._pods = await _validate(self.hass, username, user_input[CONF_PASSWORD])
-            except ReteleElectriceAuthError:
+            except ReteleElectriceAuthError as err:
+                _LOGGER.warning("Autentificare eșuată pe portal: %s", err)
                 errors["base"] = "invalid_auth"
             except ReteleElectriceError:
                 _LOGGER.exception("Eroare la conectarea la portal")
