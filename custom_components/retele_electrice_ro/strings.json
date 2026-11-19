@@ -93,7 +93,7 @@
         "name": "Consumption this month"
       },
       "valori_instantanee": {
-        "name": "Instant values"
+        "name": "Last instant reading"
       },
       "stare_contor": {
         "name": "Meter status"
@@ -121,6 +121,39 @@
       },
       "arhiva_productie": {
         "name": "Produced energy archive"
+      },
+      "putere_instantanee": {
+        "name": "Instant power"
+      },
+      "tensiune_r": {
+        "name": "Voltage phase R"
+      },
+      "tensiune_s": {
+        "name": "Voltage phase S"
+      },
+      "tensiune_t": {
+        "name": "Voltage phase T"
+      },
+      "curent_r": {
+        "name": "Current phase R"
+      },
+      "curent_s": {
+        "name": "Current phase S"
+      },
+      "curent_t": {
+        "name": "Current phase T"
+      },
+      "index_contor_consum": {
+        "name": "Meter consumption index"
+      },
+      "index_contor_productie": {
+        "name": "Meter production index"
+      },
+      "energie_reactiva_inductiva": {
+        "name": "Reactive inductive energy"
+      },
+      "energie_reactiva_capacitiva": {
+        "name": "Reactive capacitive energy"
       }
     },
     "binary_sensor": {

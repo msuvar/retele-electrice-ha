@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -13,7 +13,14 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import EntityCategory, UnitOfEnergy, UnitOfPower
+from homeassistant.const import (
+    EntityCategory,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfPower,
+)
+from homeassistant.util import dt as dt_util
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -132,15 +139,47 @@ def _archive_attrs(kind: str) -> Callable[[Data], Data]:
     return fn
 
 
-def _instant_state(d: Data) -> str | None:
-    values = d.get("instant")
-    if not values:
+def _instant(d: Data) -> Data:
+    values = d.get("instant") or []
+    first = values[0] if isinstance(values, list) and values else values
+    return first if isinstance(first, dict) else {}
+
+
+def _instant_value(field: str) -> Callable[[Data], float | None]:
+    return lambda d: to_float(_instant(d).get(field))
+
+
+def _instant_energy(kind: str) -> Callable[[Data], float | None]:
+    def fn(d: Data) -> float | None:
+        for e in _instant(d).get("energyReadingList") or []:
+            if str(e.get("ENERGY_TYPE", "")).upper() == kind:
+                return to_float(e.get("VALUE"))
         return None
-    first = values[0] if isinstance(values, list) else values
-    for k in ("readingDate", "READING_DATE", "data", "DATE", "timestamp"):
-        if isinstance(first, dict) and first.get(k):
-            return str(first[k])
-    return f"{len(values)} valori"
+
+    return fn
+
+
+def _instant_state(d: Data) -> datetime | None:
+    """Momentul ultimei citiri instantanee (LAST_UPDATED, ora României)."""
+    raw = _instant(d).get("LAST_UPDATED")
+    if not raw:
+        return None
+    for fmt in ("%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+        try:
+            return datetime.strptime(raw, fmt).replace(
+                tzinfo=dt_util.get_default_time_zone()
+            )
+        except ValueError:
+            continue
+    return None
+
+
+def _three_phase(d: Data) -> bool:
+    fazic = str((d.get("meter") or {}).get("METER_FAZIC") or "").upper()
+    if fazic:
+        return "TRIFAZ" in fazic
+    inst = _instant(d)
+    return bool(inst.get("US_VALUE") or inst.get("UT_VALUE"))
 
 
 def _outage_state(d: Data) -> str | None:
@@ -158,6 +197,7 @@ class REDescription(SensorEntityDescription):
     smart_only: bool = False
     prosumer_only: bool = False
     uses_requests: bool = False
+    three_phase_only: bool = False
 
 
 SENSORS: tuple[REDescription, ...] = (
@@ -263,9 +303,13 @@ SENSORS: tuple[REDescription, ...] = (
     REDescription(
         key="valori_instantanee",
         smart_only=True,
-        icon="mdi:flash",
+        icon="mdi:clock-check-outline",
+        device_class=SensorDeviceClass.TIMESTAMP,
         value_fn=_instant_state,
-        attrs_fn=lambda d: {"valori": d.get("instant")},
+        attrs_fn=lambda d: {
+            "data_citire": _instant(d).get("READING_DATE"),
+            "valori": d.get("instant"),
+        },
         uses_requests=True,
     ),
     REDescription(
@@ -331,6 +375,113 @@ SENSORS: tuple[REDescription, ...] = (
         value_fn=_history_value("month", "SUM_EAP"),
     ),
     REDescription(
+        key="putere_instantanee",
+        smart_only=True,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        suggested_display_precision=3,
+        value_fn=_instant_value("P_VALUE"),
+    ),
+    REDescription(
+        key="tensiune_r",
+        smart_only=True,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        suggested_display_precision=1,
+        value_fn=_instant_value("UR_VALUE"),
+    ),
+    REDescription(
+        key="tensiune_s",
+        smart_only=True,
+        three_phase_only=True,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        suggested_display_precision=1,
+        value_fn=_instant_value("US_VALUE"),
+    ),
+    REDescription(
+        key="tensiune_t",
+        smart_only=True,
+        three_phase_only=True,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        suggested_display_precision=1,
+        value_fn=_instant_value("UT_VALUE"),
+    ),
+    REDescription(
+        key="curent_r",
+        smart_only=True,
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        suggested_display_precision=2,
+        value_fn=_instant_value("IR_VALUE"),
+    ),
+    REDescription(
+        key="curent_s",
+        smart_only=True,
+        three_phase_only=True,
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        suggested_display_precision=2,
+        value_fn=_instant_value("IS_VALUE"),
+    ),
+    REDescription(
+        key="curent_t",
+        smart_only=True,
+        three_phase_only=True,
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        suggested_display_precision=2,
+        value_fn=_instant_value("IT_VALUE"),
+    ),
+    REDescription(
+        key="index_contor_consum",
+        smart_only=True,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=1,
+        value_fn=_instant_energy("EA"),
+    ),
+    REDescription(
+        key="index_contor_productie",
+        smart_only=True,
+        prosumer_only=True,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=1,
+        icon="mdi:solar-power",
+        value_fn=_instant_energy("EAP"),
+    ),
+    REDescription(
+        key="energie_reactiva_inductiva",
+        smart_only=True,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement="kvarh",
+        suggested_display_precision=1,
+        icon="mdi:sine-wave",
+        value_fn=_instant_energy("ER"),
+    ),
+    REDescription(
+        key="energie_reactiva_capacitiva",
+        smart_only=True,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement="kvarh",
+        suggested_display_precision=1,
+        icon="mdi:sine-wave",
+        value_fn=_instant_energy("ERC"),
+    ),
+    REDescription(
         key="stare_contor",
         smart_only=True,
         icon="mdi:meter-electric",
@@ -359,6 +510,8 @@ async def async_setup_entry(
                 continue
             if desc.prosumer_only and not is_prosumer(data):
                 continue
+            if desc.three_phase_only and not _three_phase(data):
+                continue
             entities.append(ReteleElectriceSensor(coordinator, pod, desc))
     async_add_entities(entities)
 
@@ -376,7 +529,7 @@ class ReteleElectriceSensor(ReteleElectriceEntity, SensorEntity):
             value = self.entity_description.value_fn(self.pod_data)
         except (KeyError, TypeError, ValueError):
             return None
-        if isinstance(value, date) or value is None or isinstance(value, (int, float, str)):
+        if isinstance(value, (date, datetime)) or value is None or isinstance(value, (int, float, str)):
             return value
         return str(value)
 

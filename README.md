@@ -18,7 +18,10 @@ integrări și nu are sistem de licență.
 | Date furnizor | Furnizorul actual; atribute: CUI, date de activare, punct de delimitare, detalii contoare |
 | Arhivă energie consumată | Totalul anului curent; atribute: citirile pe ultimii 2 ani grupate pe an, cu total anual |
 | Consum azi / ieri / luna curentă | Doar contor inteligent, din curba de sarcină (kWh) |
-| Valori instantanee | Doar contor inteligent: ultimele valori, dacă au fost solicitate din portal |
+| Ultima citire instantanee | Doar contor inteligent: momentul ultimei citiri de la contor |
+| Putere instantanee, Tensiune și Curent pe fază | Doar contor inteligent (S/T doar la trifazic): valorile din ultima citire solicitată |
+| Index contor consum / producție | Doar contor inteligent: indexul din ultima citire instantanee (mai proaspăt decât arhiva lunară; producția doar la prosumatori) |
+| Energie reactivă inductivă / capacitivă | Doar contor inteligent, diagnostic (kvarh) |
 | Stare contor | Doar contor inteligent: serie, tip, data instalării |
 | Butoane „Solicită citire contor” și „Actualizare valori instantanee” | Doar contor inteligent: cere contorului o citire nouă (max. 10/zi pe portal, recitire automată la 5 min, 30 min și 2 h), respectiv recitește valorile disponibile |
 | Arhivă energie produsă | Doar prosumatori: la fel ca arhiva de consum |

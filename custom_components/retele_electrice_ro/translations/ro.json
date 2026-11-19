@@ -93,7 +93,7 @@
         "name": "Consum luna curentă"
       },
       "valori_instantanee": {
-        "name": "Valori instantanee"
+        "name": "Ultima citire instantanee"
       },
       "stare_contor": {
         "name": "Stare contor"
@@ -121,6 +121,39 @@
       },
       "arhiva_productie": {
         "name": "Arhivă energie produsă"
+      },
+      "putere_instantanee": {
+        "name": "Putere instantanee"
+      },
+      "tensiune_r": {
+        "name": "Tensiune faza R"
+      },
+      "tensiune_s": {
+        "name": "Tensiune faza S"
+      },
+      "tensiune_t": {
+        "name": "Tensiune faza T"
+      },
+      "curent_r": {
+        "name": "Curent faza R"
+      },
+      "curent_s": {
+        "name": "Curent faza S"
+      },
+      "curent_t": {
+        "name": "Curent faza T"
+      },
+      "index_contor_consum": {
+        "name": "Index contor consum"
+      },
+      "index_contor_productie": {
+        "name": "Index contor producție"
+      },
+      "energie_reactiva_inductiva": {
+        "name": "Energie reactivă inductivă"
+      },
+      "energie_reactiva_capacitiva": {
+        "name": "Energie reactivă capacitivă"
       }
     },
     "binary_sensor": {
