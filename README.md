@@ -20,7 +20,7 @@ integrări și nu are sistem de licență.
 | Consum azi / ieri / luna curentă | Doar contor inteligent, din curba de sarcină (kWh) |
 | Valori instantanee | Doar contor inteligent: ultimele valori, dacă au fost solicitate din portal |
 | Stare contor | Doar contor inteligent: serie, tip, data instalării |
-| Buton „Actualizare valori instantanee” | Doar contor inteligent: recitește imediat valorile instantanee din portal |
+| Butoane „Solicită citire contor” și „Actualizare valori instantanee” | Doar contor inteligent: cere contorului o citire nouă (max. 10/zi pe portal, recitire automată la 5 min, 30 min și 2 h), respectiv recitește valorile disponibile |
 | Arhivă energie produsă | Doar prosumatori: la fel ca arhiva de consum |
 | Index energie produsă / Producție ultima lună citită | Doar prosumatori: indexul energiei livrate în rețea (merge în Energy dashboard ca „Return to grid”) |
 | Producție azi / ieri / luna curentă | Doar prosumatori cu contor inteligent, din curba de sarcină |

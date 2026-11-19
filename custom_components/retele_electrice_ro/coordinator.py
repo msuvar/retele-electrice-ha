@@ -62,6 +62,8 @@ class ReteleElectriceCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]
         self.client = client
         self._meter_info_cache: dict[str, tuple[datetime, dict[str, Any] | None]] = {}
         self._supplier_cache: dict[str, tuple[datetime, dict[str, Any] | None]] = {}
+        # Ultima solicitare de citire nouă trimisă din Home Assistant, per POD.
+        self.instant_requests: dict[str, dict[str, Any]] = {}
 
     @property
     def selected_pods(self) -> list[str]:

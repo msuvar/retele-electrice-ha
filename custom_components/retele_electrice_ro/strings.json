@@ -129,6 +129,9 @@
       }
     },
     "button": {
+      "solicita_citire": {
+        "name": "Request meter reading"
+      },
       "actualizare_instantanee": {
         "name": "Refresh instant values"
       }

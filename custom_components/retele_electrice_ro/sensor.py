@@ -157,6 +157,7 @@ class REDescription(SensorEntityDescription):
     attrs_fn: Callable[[Data], Data] | None = None
     smart_only: bool = False
     prosumer_only: bool = False
+    uses_requests: bool = False
 
 
 SENSORS: tuple[REDescription, ...] = (
@@ -265,6 +266,7 @@ SENSORS: tuple[REDescription, ...] = (
         icon="mdi:flash",
         value_fn=_instant_state,
         attrs_fn=lambda d: {"valori": d.get("instant")},
+        uses_requests=True,
     ),
     REDescription(
         key="index_energie_produsa",
@@ -383,6 +385,9 @@ class ReteleElectriceSensor(ReteleElectriceEntity, SensorEntity):
         if not self.entity_description.attrs_fn:
             return None
         try:
-            return self.entity_description.attrs_fn(self.pod_data)
+            attrs = self.entity_description.attrs_fn(self.pod_data)
         except (KeyError, TypeError, ValueError):
             return None
+        if self.entity_description.uses_requests:
+            attrs = {**attrs, **self.coordinator.instant_requests.get(self.pod, {})}
+        return attrs

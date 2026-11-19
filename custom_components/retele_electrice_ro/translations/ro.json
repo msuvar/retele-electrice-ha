@@ -129,6 +129,9 @@
       }
     },
     "button": {
+      "solicita_citire": {
+        "name": "Solicită citire contor"
+      },
       "actualizare_instantanee": {
         "name": "Actualizare valori instantanee"
       }

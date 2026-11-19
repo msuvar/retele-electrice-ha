@@ -440,6 +440,23 @@ class ReteleElectriceClient:
             rows = [rows]
         return rows[0] if rows else None
 
+    async def async_request_meter_instant(
+        self, pod: str, customer_code: str
+    ) -> dict[str, Any]:
+        """Cere contorului o citire nouă (ca „Solicită datele de consum”).
+
+        Consumă una din cele 10 solicitări permise în 24 de ore. Portalul răspunde
+        cu ESTIMATION (timpul estimat până la disponibilitatea datelor).
+        """
+        res = await self._vf(
+            VF_METER_INSTANT, "ReqMeterInstantData", f"{customer_code},,{pod}"
+        ) or {}
+        if res.get("Result") != "OK":
+            raise ReteleElectriceError(
+                f"Solicitarea a fost refuzată: {res.get('ErrorMessage') or res}"
+            )
+        return res.get("row") or {}
+
     async def async_get_meter_instant(
         self, pod: str, customer_code: str
     ) -> list[dict[str, Any]] | None:
