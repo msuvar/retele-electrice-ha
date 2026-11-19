@@ -1,0 +1,11 @@
+{
+  "domain": "retele_electrice_ro",
+  "name": "Rețele Electrice România (independent)",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://contulmeu.reteleelectrice.ro/",
+  "iot_class": "cloud_polling",
+  "integration_type": "hub",
+  "requirements": [],
+  "version": "0.1.0"
+}

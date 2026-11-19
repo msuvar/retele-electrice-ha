@@ -1,0 +1,91 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Rețele Electrice account",
+        "description": "Your contulmeu.reteleelectrice.ro credentials.",
+        "data": {
+          "username": "Email",
+          "password": "Password",
+          "scan_interval": "Update interval (seconds)"
+        }
+      },
+      "pods": {
+        "title": "Delivery points",
+        "description": "Choose the PODs to monitor.",
+        "data": {
+          "pods": "PODs"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate",
+        "description": "The portal password is no longer valid. Enter the new one.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid email or password (or the portal requires extra verification).",
+      "cannot_connect": "Cannot connect to the portal. Check the log.",
+      "no_pods": "The account has no POD."
+    },
+    "abort": {
+      "already_configured": "Account already configured.",
+      "reauth_successful": "Re-authentication successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "scan_interval": "Update interval (seconds)",
+          "pods": "PODs"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reload the POD list."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "index_energie": {
+        "name": "Active energy index"
+      },
+      "data_ultimei_citiri": {
+        "name": "Last reading date"
+      },
+      "consum_ultima_luna": {
+        "name": "Last read month consumption"
+      },
+      "intreruperi": {
+        "name": "Outages"
+      },
+      "putere_aprobata": {
+        "name": "Approved power"
+      },
+      "consum_azi": {
+        "name": "Consumption today"
+      },
+      "consum_ieri": {
+        "name": "Consumption yesterday"
+      },
+      "consum_luna_curenta": {
+        "name": "Consumption this month"
+      },
+      "valori_instantanee": {
+        "name": "Instant values"
+      },
+      "stare_contor": {
+        "name": "Meter status"
+      }
+    },
+    "binary_sensor": {
+      "intrerupere_activa": {
+        "name": "Outage active"
+      }
+    }
+  }
+}

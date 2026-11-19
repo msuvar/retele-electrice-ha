@@ -1,0 +1,91 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cont Rețele Electrice",
+        "description": "Datele de autentificare de pe contulmeu.reteleelectrice.ro.",
+        "data": {
+          "username": "Email",
+          "password": "Parolă",
+          "scan_interval": "Interval actualizare (secunde)"
+        }
+      },
+      "pods": {
+        "title": "Locuri de consum",
+        "description": "Alege POD-urile pe care vrei să le monitorizezi.",
+        "data": {
+          "pods": "POD-uri"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reautentificare",
+        "description": "Parola pentru portal nu mai este valabilă. Introdu parola nouă.",
+        "data": {
+          "password": "Parolă"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Email sau parolă incorectă (sau portalul cere verificare suplimentară).",
+      "cannot_connect": "Nu mă pot conecta la portal. Verifică jurnalul.",
+      "no_pods": "Contul nu are niciun POD asociat."
+    },
+    "abort": {
+      "already_configured": "Contul este deja configurat.",
+      "reauth_successful": "Reautentificare reușită."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opțiuni",
+        "data": {
+          "scan_interval": "Interval actualizare (secunde)",
+          "pods": "POD-uri"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nu am putut reîncărca lista de POD-uri."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "index_energie": {
+        "name": "Index energie activă"
+      },
+      "data_ultimei_citiri": {
+        "name": "Data ultimei citiri"
+      },
+      "consum_ultima_luna": {
+        "name": "Consum ultima lună citită"
+      },
+      "intreruperi": {
+        "name": "Întreruperi"
+      },
+      "putere_aprobata": {
+        "name": "Putere aprobată"
+      },
+      "consum_azi": {
+        "name": "Consum azi"
+      },
+      "consum_ieri": {
+        "name": "Consum ieri"
+      },
+      "consum_luna_curenta": {
+        "name": "Consum luna curentă"
+      },
+      "valori_instantanee": {
+        "name": "Valori instantanee"
+      },
+      "stare_contor": {
+        "name": "Stare contor"
+      }
+    },
+    "binary_sensor": {
+      "intrerupere_activa": {
+        "name": "Întrerupere activă"
+      }
+    }
+  }
+}
