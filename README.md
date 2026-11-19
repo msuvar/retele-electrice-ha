@@ -14,11 +14,14 @@ integrări și nu are sistem de licență.
 | Data ultimei citiri | Data indexului de mai sus |
 | Consum ultima lună citită | Diferența dintre ultimele două citiri reale |
 | Întreruperi / Întrerupere activă | Mesajul portalului despre întreruperi + senzor binar |
-| Putere aprobată | Diagnostic: putere, adresă, tarif, contract |
+| Informații POD | Putere aprobată; atribute: adresă, tarif, tip contract, profil consum, putere absorbită/cedată, serie și tip contor |
+| Date furnizor | Furnizorul actual; atribute: CUI, date de activare, punct de delimitare, detalii contoare |
+| Arhivă energie consumată | Totalul anului curent; atribute: citirile pe ultimii 2 ani grupate pe an, cu total anual |
 | Consum azi / ieri / luna curentă | Doar contor inteligent, din curba de sarcină (kWh) |
 | Valori instantanee | Doar contor inteligent: ultimele valori, dacă au fost solicitate din portal |
 | Stare contor | Doar contor inteligent: serie, tip, data instalării |
 | Buton „Actualizare valori instantanee” | Doar contor inteligent: recitește imediat valorile instantanee din portal |
+| Arhivă energie produsă | Doar prosumatori: la fel ca arhiva de consum |
 | Index energie produsă / Producție ultima lună citită | Doar prosumatori: indexul energiei livrate în rețea (merge în Energy dashboard ca „Return to grid”) |
 | Producție azi / ieri / luna curentă | Doar prosumatori cu contor inteligent, din curba de sarcină |
 
@@ -29,6 +32,8 @@ integrări și nu are sistem de licență.
 2. Repornește Home Assistant.
 3. *Setări → Dispozitive și servicii → Adaugă integrare → „Rețele Electrice România (independent)”*.
 4. Introdu emailul și parola de pe portal, apoi alege POD-urile.
+
+Din *Configurează* poți schimba ulterior POD-urile, intervalul, emailul și parola, fără reinstalare.
 
 Intervalul de actualizare implicit este de 1 oră (minim 15 minute). Datele din curba de sarcină
 apar pe portal cu o întârziere de câteva ore, deci „Consum azi” poate rămâne gol dimineața.

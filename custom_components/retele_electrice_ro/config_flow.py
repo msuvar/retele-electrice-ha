@@ -126,10 +126,15 @@ class ReteleElectriceConfigFlow(ConfigFlow, domain=DOMAIN):
 
 class ReteleElectriceOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        if user_input is not None:
-            return self.async_create_entry(data=user_input)
+        return self.async_show_menu(step_id="init", menu_options=["settings", "credentials"])
 
+    async def async_step_settings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         entry = self.config_entry
+        if user_input is not None:
+            return self.async_create_entry(data={**entry.options, **user_input})
+
         errors: dict[str, str] = {}
         try:
             pods = await _validate(
@@ -153,4 +158,48 @@ class ReteleElectriceOptionsFlow(OptionsFlow):
                 ): cv.multi_select(pods),
             }
         )
-        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
+        return self.async_show_form(step_id="settings", data_schema=schema, errors=errors)
+
+    async def async_step_credentials(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Schimbă emailul și/sau parola fără reinstalare."""
+        entry = self.config_entry
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            username = user_input[CONF_USERNAME].strip()
+            password = user_input.get(CONF_PASSWORD) or entry.data[CONF_PASSWORD]
+            new_uid = username.lower()
+            clash = any(
+                e.unique_id == new_uid and e.entry_id != entry.entry_id
+                for e in self.hass.config_entries.async_entries(DOMAIN)
+            )
+            if clash:
+                errors["base"] = "already_configured"
+            else:
+                try:
+                    await _validate(self.hass, username, password)
+                except ReteleElectriceAuthError as err:
+                    _LOGGER.warning("Autentificare eșuată pe portal: %s", err)
+                    errors["base"] = "invalid_auth"
+                except ReteleElectriceError:
+                    errors["base"] = "cannot_connect"
+                else:
+                    self.hass.config_entries.async_update_entry(
+                        entry,
+                        title=username,
+                        unique_id=new_uid,
+                        data={**entry.data, CONF_USERNAME: username, CONF_PASSWORD: password},
+                    )
+                    # Salvarea opțiunilor declanșează reîncărcarea integrării.
+                    return self.async_create_entry(data=dict(entry.options))
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_USERNAME, default=entry.data[CONF_USERNAME]): str,
+                vol.Optional(CONF_PASSWORD): str,
+            }
+        )
+        return self.async_show_form(
+            step_id="credentials", data_schema=schema, errors=errors
+        )

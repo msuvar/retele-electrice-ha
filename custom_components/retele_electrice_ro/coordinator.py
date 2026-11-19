@@ -61,6 +61,7 @@ class ReteleElectriceCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]
         self.entry = entry
         self.client = client
         self._meter_info_cache: dict[str, tuple[datetime, dict[str, Any] | None]] = {}
+        self._supplier_cache: dict[str, tuple[datetime, dict[str, Any] | None]] = {}
 
     @property
     def selected_pods(self) -> list[str]:
@@ -107,17 +108,27 @@ class ReteleElectriceCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]
         smart = bool(info.get("Smart_meter__c"))
         data: dict[str, Any] = {"info": info, "smart": smart}
 
-        # Arhivă indexuri: ultimele ~13 luni
-        start = (now.replace(day=1) - timedelta(days=380)).replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0
-        )
-        end = (now.replace(day=28) + timedelta(days=5)).replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0
-        )
-        readings = await self._safe(
-            f"{pod} indexuri", self.client.async_get_readings(pod, code, start, end)
-        )
-        data["readings"] = self._normalize_readings(readings or [])
+        # Arhivă indexuri: anul trecut + anul curent (maxim 2 ani), câte o cerere pe an
+        raw_readings: list[dict[str, Any]] = []
+        for year in (now.year - 1, now.year):
+            chunk = await self._safe(
+                f"{pod} indexuri {year}",
+                self.client.async_get_readings(
+                    pod, code, datetime(year, 1, 1), datetime(year + 1, 1, 1)
+                ),
+            )
+            raw_readings.extend(chunk or [])
+        data["readings"] = self._normalize_readings(raw_readings)
+        data["archive"] = build_archive(data["readings"])
+
+        cached_sup = self._supplier_cache.get(pod)
+        if cached_sup is None or now - cached_sup[0] > timedelta(hours=24):
+            supplier = await self._safe(
+                f"{pod} furnizor", self.client.async_query_pod(pod)
+            )
+            if supplier is not None or cached_sup is None:
+                self._supplier_cache[pod] = (now, supplier)
+        data["supplier"] = self._supplier_cache[pod][1]
 
         data["outage"] = await self._safe(
             f"{pod} întreruperi", self.client.async_get_outage(pod)
@@ -184,8 +195,8 @@ class ReteleElectriceCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]
                     "serial": r.get("SerialNumber"),
                 }
             )
-        out.sort(key=lambda x: x["date"], reverse=True)
-        return out
+        unique = {(r["date"], r["type"]): r for r in out}
+        return sorted(unique.values(), key=lambda x: x["date"], reverse=True)
 
 
 def is_prosumer(data: dict[str, Any]) -> bool:
@@ -198,3 +209,41 @@ def is_prosumer(data: dict[str, Any]) -> bool:
         to_float((data.get(k) or {}).get("SUM_EAP")) is not None
         for k in ("today", "yesterday", "month")
     )
+
+
+def build_archive(readings: list[dict[str, Any]]) -> dict[str, dict[int, dict[str, Any]]]:
+    """Grupează citirile pe ani și calculează totalul anual.
+
+    Totalul unui an = ultimul index din an minus ultimul index din anul anterior
+    (sau minus primul index din an, dacă anul anterior lipsește).
+    """
+    archive: dict[str, dict[int, dict[str, Any]]] = {}
+    for field, key in (("value", "consum"), ("produced", "productie")):
+        rows = sorted(
+            (r for r in readings if r.get(field) is not None), key=lambda r: r["date"]
+        )
+        by_year: dict[int, list[dict[str, Any]]] = {}
+        for r in rows:
+            by_year.setdefault(r["date"].year, []).append(r)
+        result: dict[int, dict[str, Any]] = {}
+        prev_last: float | None = None
+        for year in sorted(by_year):
+            items = by_year[year]
+            base = prev_last if prev_last is not None else items[0][field]
+            total = round(items[-1][field] - base, 3)
+            monthly: dict[str, float] = {}
+            last_val = base
+            for r in items:
+                if r.get("type") == "real" or r is items[-1]:
+                    label = r["date"].strftime("%Y-%m-%d")
+                    monthly[label] = round(r[field] - last_val, 3)
+                    last_val = r[field]
+            result[year] = {
+                "total_kwh": total,
+                "complet": prev_last is not None,
+                "citiri": {r["date"].strftime("%Y-%m-%d"): r[field] for r in items},
+                "consum_intre_citiri" if key == "consum" else "productie_intre_citiri": monthly,
+            }
+            prev_last = items[-1][field]
+        archive[key] = result
+    return archive

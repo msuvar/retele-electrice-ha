@@ -15,6 +15,7 @@ MIN_SCAN_INTERVAL = 900
 MAX_SCAN_INTERVAL = 86400
 
 # Pagini Visualforce folosite de portal ca proxy către serviciile interne
+VF_QUERY_POD = "PED_ProxyCallWSAsync_Curve_VF"
 VF_OUTAGES = "PED_ProxyCallWSAsynPowerOutages_VF"
 VF_READINGS = "PED_ProxyCallWSAsynSingleSelf_VF"
 VF_METER_INFO = "PED_ProxyCallWSAsynSmartMeterCurrentData"

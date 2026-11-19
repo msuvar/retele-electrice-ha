@@ -86,6 +86,52 @@ def _history_attrs(key: str) -> Callable[[Data], Data]:
     return fn
 
 
+def _supplier_attrs(d: Data) -> Data:
+    sup = d.get("supplier") or {}
+    if not sup:
+        return {}
+    keys = (
+        "furnizor_pre", "cui", "activ", "activ_furnizor_la", "activ_consumator_la",
+        "kw_aprobata", "kw_evacuata", "delimitare", "u_delimitare", "racordare",
+        "telecitit", "aggregation_formula", "compensation_mode", "cer_version",
+        "cer_date", "atr_number", "atr_date", "cft_description", "cft_ou_description",
+    )
+    attrs: Data = {k: sup.get(k) for k in keys if sup.get(k) not in (None, "", " - ")}
+    attrs["contoare"] = [
+        {
+            k: m.get(k)
+            for k in ("seria", "marca", "det_tip", "data_montare", "constanta",
+                      "precizie", "ee_orara", "kw_interval", "tipmontaj_cod")
+            if m.get(k) not in (None, "")
+        }
+        for m in sup.get("Contor") or []
+    ]
+    return attrs
+
+
+def _archive_value(kind: str) -> Callable[[Data], float | None]:
+    """Totalul anului curent (sau al celui mai recent an cu citiri)."""
+
+    def fn(d: Data) -> float | None:
+        years = (d.get("archive") or {}).get(kind) or {}
+        if not years:
+            return None
+        return years[max(years)]["total_kwh"]
+
+    return fn
+
+
+def _archive_attrs(kind: str) -> Callable[[Data], Data]:
+    def fn(d: Data) -> Data:
+        years = (d.get("archive") or {}).get(kind) or {}
+        attrs: Data = {"an": max(years) if years else None}
+        for year, info in sorted(years.items(), reverse=True):
+            attrs[str(year)] = info
+        return attrs
+
+    return fn
+
+
 def _instant_state(d: Data) -> str | None:
     values = d.get("instant")
     if not values:
@@ -158,7 +204,31 @@ SENSORS: tuple[REDescription, ...] = (
             "valabilitate_contract": d["info"].get("Validity_of_the_supply_contract__c"),
             "smart_meter": d["info"].get("Smart_meter__c"),
             "prosumator": d["info"].get("isProductor__c"),
+            "tip_contract": d["info"].get("Contract_Type__c"),
+            "tip_consumator": d["info"].get("Consumer_Type_Account__c"),
+            "profil_consum": d["info"].get("ConsumptionProfile__c"),
+            "piata": d["info"].get("Market_Type__c"),
+            "putere_absorbita_kva": to_float(d["info"].get("Absorbed_Power_KVA__c")),
+            "putere_cedata_kw": to_float((d.get("supplier") or {}).get("kw_evacuata")),
+            "serie_contor": d["info"].get("EA_METER_SERIE__c"),
+            "tip_contor": d["info"].get("EA_METER_TYPE__c"),
+            "regim_lucru": d["info"].get("Working_Mode__c"),
         },
+    ),
+    REDescription(
+        key="furnizor",
+        icon="mdi:office-building",
+        value_fn=lambda d: (d.get("supplier") or {}).get("furnizor"),
+        attrs_fn=_supplier_attrs,
+    ),
+    REDescription(
+        key="arhiva_consum",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=0,
+        icon="mdi:archive-outline",
+        value_fn=_archive_value("consum"),
+        attrs_fn=_archive_attrs("consum"),
     ),
     REDescription(
         key="consum_azi",
@@ -206,6 +276,16 @@ SENSORS: tuple[REDescription, ...] = (
         icon="mdi:solar-power",
         value_fn=lambda d: (_latest(d, "produced") or {}).get("produced"),
         attrs_fn=_readings_attrs("produced"),
+    ),
+    REDescription(
+        key="arhiva_productie",
+        prosumer_only=True,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=0,
+        icon="mdi:archive-outline",
+        value_fn=_archive_value("productie"),
+        attrs_fn=_archive_attrs("productie"),
     ),
     REDescription(
         key="productie_ultima_luna",

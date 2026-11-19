@@ -31,6 +31,7 @@ from .const import (
     VF_METER_INFO,
     VF_METER_INSTANT,
     VF_OUTAGES,
+    VF_QUERY_POD,
     VF_READINGS,
 )
 
@@ -103,6 +104,19 @@ def _parse_inputs(page: str) -> list[tuple[str, str]]:
         if name:
             fields.append((name, html.unescape(attrs.get("value", ""))))
     return fields
+
+
+def _strip_meta(value: Any) -> Any:
+    """Elimină câmpurile tehnice SOAP (…_type_info, field_order, apex_schema)."""
+    if isinstance(value, list):
+        return [_strip_meta(v) for v in value]
+    if isinstance(value, dict):
+        return {
+            k: _strip_meta(v)
+            for k, v in value.items()
+            if not k.endswith("_type_info") and k not in ("apex_schema_type_info",)
+        }
+    return value
 
 
 def _is_login(text: str) -> bool:
@@ -373,6 +387,18 @@ class ReteleElectriceClient:
     async def async_get_pods(self) -> list[dict[str, Any]]:
         pods = await self._aura(AURA_GET_PODS)
         return list(pods or [])
+
+    async def async_query_pod(self, pod: str) -> dict[str, Any] | None:
+        """Date furnizor, contract și contor pentru POD (ca în „Informații POD”)."""
+        res = await self._vf(VF_QUERY_POD, "queryPOD", f"{pod},Client_Company")
+        if not isinstance(res, dict) or not res:
+            return None
+        res = _strip_meta(res)
+        meters = res.get("Contor") or []
+        if isinstance(meters, dict):
+            meters = [meters]
+        res["Contor"] = meters
+        return res
 
     async def async_get_outage(self, pod: str) -> dict[str, Any]:
         res = await self._vf(VF_OUTAGES, "PowerOutages", f"{pod},ro") or {}

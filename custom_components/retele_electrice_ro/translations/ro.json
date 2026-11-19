@@ -39,14 +39,31 @@
     "step": {
       "init": {
         "title": "Opțiuni",
+        "menu_options": {
+          "settings": "POD-uri și interval de actualizare",
+          "credentials": "Email și parolă"
+        }
+      },
+      "settings": {
+        "title": "POD-uri și interval",
         "data": {
           "scan_interval": "Interval actualizare (secunde)",
           "pods": "POD-uri"
         }
+      },
+      "credentials": {
+        "title": "Email și parolă",
+        "description": "Lasă parola goală ca să o păstrezi pe cea actuală.",
+        "data": {
+          "username": "Email",
+          "password": "Parolă nouă"
+        }
       }
     },
     "error": {
-      "cannot_connect": "Nu am putut reîncărca lista de POD-uri."
+      "cannot_connect": "Nu mă pot conecta la portal.",
+      "invalid_auth": "Email sau parolă incorectă.",
+      "already_configured": "Acest cont este deja configurat într-o altă intrare."
     }
   },
   "entity": {
@@ -64,7 +81,7 @@
         "name": "Întreruperi"
       },
       "putere_aprobata": {
-        "name": "Putere aprobată"
+        "name": "Informații POD"
       },
       "consum_azi": {
         "name": "Consum azi"
@@ -95,6 +112,15 @@
       },
       "productie_luna_curenta": {
         "name": "Producție luna curentă"
+      },
+      "furnizor": {
+        "name": "Date furnizor"
+      },
+      "arhiva_consum": {
+        "name": "Arhivă energie consumată"
+      },
+      "arhiva_productie": {
+        "name": "Arhivă energie produsă"
       }
     },
     "binary_sensor": {
